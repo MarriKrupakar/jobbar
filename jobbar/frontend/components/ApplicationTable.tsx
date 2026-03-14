@@ -10,7 +10,7 @@ import {
   ArrowSquareOut,
   DotsThreeVertical,
   Trash,
-  CaretUpDown,
+  CaretDown,
 } from 'phosphor-react';
 import clsx from 'clsx';
 
@@ -140,7 +140,7 @@ export default function ApplicationTable({ applications, onRefresh }: Props) {
                       </option>
                     ))}
                   </select>
-                  <CaretUpDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                  <CaretDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
                 </div>
               </td>
 
