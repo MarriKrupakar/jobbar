@@ -40,16 +40,27 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // If user is logged in and on homepage, redirect to dashboard
+      if (session?.user && pathname === '/') {
+        router.push('/dashboard');
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
-        if (!session && !PUBLIC_ROUTES.includes(pathname)) {
+        // Redirect to dashboard on sign in
+        if (event === 'SIGNED_IN' && session?.user) {
+          router.push('/dashboard');
+        }
+
+        // Redirect to home on sign out
+        if (event === 'SIGNED_OUT') {
           router.push('/');
         }
       }
@@ -59,10 +70,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/dashboard`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
+
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo,
       },
     });
   };
