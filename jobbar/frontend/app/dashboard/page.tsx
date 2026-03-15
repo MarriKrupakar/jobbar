@@ -1,223 +1,44 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
-import DashboardCard from '@/components/DashboardCard';
-import { applicationsApi, resumeApi } from '@/lib/api';
-import Link from 'next/link';
-import {
-  Briefcase,
-  ClipboardText,
-  Trophy,
-  Target,
-  SpinnerGap,
-  ArrowRight,
-  FileText,
-} from 'phosphor-react';
 
-interface Stats {
-  total: number;
-  applied: number;
-  underReview: number;
-  interview: number;
-  offer: number;
-  rejected: number;
-}
-
-export default function DashboardPage() {
-  const { user, loading } = useAuth();
+export default function LandingPage() {
+  const { user, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [hasResume, setHasResume] = useState<boolean | null>(null);
-  const [recentApps, setRecentApps] = useState<any[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-
-  useEffect(() => {
-    if (!loading && !user) router.push('/');
-  }, [user, loading]);
-
-  useEffect(() => {
-    if (!user) return;
-    Promise.all([
-      applicationsApi.getStats(),
-      applicationsApi.getAll({ limit: 5 }),
-      resumeApi.getAll(),
-    ]).then(([statsRes, appsRes, resumeRes]) => {
-      setStats(statsRes.data.stats);
-      setRecentApps(appsRes.data.applications || []);
-      setHasResume((resumeRes.data.resumes || []).some((r: any) => r.is_active));
-    }).catch(console.error)
-      .finally(() => setDataLoading(false));
-  }, [user]);
-
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-zinc-950">
-        <SpinnerGap size={32} className="text-orange-500 animate-spin" />
-      </div>
-    );
-  }
-
-  const name = user.user_metadata?.full_name?.split(' ')[0] || 'there';
-
-  const statusStyle: Record<string, string> = {
-    'Applied':      'status-applied',
-    'Under Review': 'status-under-review',
-    'Interview':    'status-interview',
-    'Offer':        'status-offer',
-    'Rejected':     'status-rejected',
-  };
+  useEffect(() => { if (!loading && user) router.push('/dashboard'); }, [user, loading]);
 
   return (
-    <div className="flex min-h-screen bg-zinc-950">
-      <Navbar />
-
-      <main className="flex-1 md:ml-60 p-6 md:p-8 mt-14 md:mt-0">
-        <div className="max-w-5xl mx-auto space-y-8">
-
-          {/* Header */}
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="font-display text-3xl font-bold text-white">
-              Good {getGreeting()}, {name}! 👋
-            </h1>
-            <p className="text-zinc-400 mt-1">Here's your job search overview.</p>
-          </motion.div>
-
-          {/* Resume upload CTA */}
-          {hasResume === false && !dataLoading && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-5 bg-orange-500/10 border border-orange-500/30 rounded-2xl flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                  <FileText size={20} weight="fill" className="text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-orange-200">Upload your resume to get started</p>
-                  <p className="text-xs text-orange-300/70">Required for AI-powered job matching and auto-apply.</p>
-                </div>
-              </div>
-              <Link href="/resume" className="btn-primary text-sm whitespace-nowrap flex items-center gap-1.5">
-                Upload Now <ArrowRight size={14} />
-              </Link>
-            </motion.div>
-          )}
-
-          {/* Stats */}
-          {dataLoading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="card p-6 h-28 skeleton" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <DashboardCard
-                title="Total Applications"
-                value={stats?.total ?? 0}
-                icon={<ClipboardText size={18} weight="fill" />}
-                color="orange"
-                delay={0}
-              />
-              <DashboardCard
-                title="Interviews"
-                value={stats?.interview ?? 0}
-                subtitle="Active conversations"
-                icon={<Trophy size={18} weight="fill" />}
-                color="purple"
-                delay={0.05}
-              />
-              <DashboardCard
-                title="Offers"
-                value={stats?.offer ?? 0}
-                icon={<Target size={18} weight="fill" />}
-                color="green"
-                delay={0.1}
-              />
-              <DashboardCard
-                title="Under Review"
-                value={stats?.underReview ?? 0}
-                icon={<Briefcase size={18} weight="fill" />}
-                color="blue"
-                delay={0.15}
-              />
-            </div>
-          )}
-
-          {/* Quick actions */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
-            <h2 className="font-display font-bold text-lg text-white mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { label: 'Search Jobs',        href: '/jobs',         emoji: '🔍', desc: 'Find matching roles' },
-                { label: 'Upload Resume',       href: '/resume',       emoji: '📄', desc: 'Parse with AI' },
-                { label: 'My Applications',     href: '/applications', emoji: '📊', desc: 'Track status' },
-                { label: 'AI Career Coach',     href: '/assistant',    emoji: '🤖', desc: 'Get guidance' },
-              ].map((action, i) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="card p-4 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all group"
-                >
-                  <div className="text-2xl mb-2">{action.emoji}</div>
-                  <p className="text-sm font-semibold text-zinc-200 group-hover:text-orange-400 transition-colors">{action.label}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{action.desc}</p>
-                </Link>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Recent applications */}
-          {recentApps.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display font-bold text-lg text-white">Recent Applications</h2>
-                <Link href="/applications" className="text-sm text-orange-400 hover:text-orange-300 flex items-center gap-1">
-                  View all <ArrowRight size={13} />
-                </Link>
-              </div>
-              <div className="card overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-zinc-800/50 border-b border-zinc-800">
-                    <tr>
-                      {['Company', 'Role', 'Status', 'Date'].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-zinc-400 uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800">
-                    {recentApps.map(app => (
-                      <tr key={app.id} className="hover:bg-zinc-800/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-zinc-200">{app.company}</td>
-                        <td className="px-4 py-3 text-zinc-400 max-w-[180px] truncate">{app.role}</td>
-                        <td className="px-4 py-3">
-                          <span className={`badge ${statusStyle[app.status]}`}>{app.status}</span>
-                        </td>
-                        <td className="px-4 py-3 text-zinc-500 text-xs">
-                          {new Date(app.applied_at).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
+    <div style={{minHeight:'100vh',background:'var(--bg-primary)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',overflow:'hidden'}} className="grid-bg">
+      <div style={{position:'absolute',width:600,height:600,borderRadius:'50%',background:'radial-gradient(circle,rgba(99,102,241,0.15) 0%,transparent 70%)',top:'-200px',left:'-200px',animation:'float 8s ease-in-out infinite'}}/>
+      <div style={{position:'absolute',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.12) 0%,transparent 70%)',bottom:'-150px',right:'-150px',animation:'float 10s ease-in-out infinite reverse'}}/>
+      <div style={{position:'absolute',width:400,height:400,borderRadius:'50%',background:'radial-gradient(circle,rgba(16,185,129,0.08) 0%,transparent 70%)',top:'40%',right:'20%',animation:'float 12s ease-in-out infinite'}}/>
+      <motion.div initial={{opacity:0,y:30}} animate={{opacity:1,y:0}} transition={{duration:0.6}} style={{width:'100%',maxWidth:440,margin:'0 auto',padding:'0 20px',position:'relative',zIndex:10}}>
+        <div style={{textAlign:'center',marginBottom:32}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:10,marginBottom:8}}>
+            
+            <span style={{fontFamily:'Space Grotesk,sans-serif',fontSize:28,fontWeight:700,color:'var(--text-primary)'}}>job<span style={{color:'var(--accent)'}}>.bar</span></span>
+          </div>
+          <p style={{color:'var(--text-secondary)',fontSize:14}}>AI-Powered Job Search & Auto-Apply Platform</p>
         </div>
-      </main>
+        <div className="glass-card" style={{padding:32}}>
+          <h2 style={{fontSize:22,fontWeight:700,marginBottom:6,textAlign:'center'}}>Welcome back</h2>
+          <p style={{color:'var(--text-secondary)',fontSize:14,textAlign:'center',marginBottom:28}}>Your AI job search assistant is ready</p>
+          <motion.button onClick={signInWithGoogle} whileHover={{scale:1.02}} whileTap={{scale:0.98}} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'13px 20px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:12,color:'var(--text-primary)',fontSize:15,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',marginBottom:24}}>
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Continue with Google
+          </motion.button>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
+            <div style={{flex:1,height:1,background:'var(--border)'}}/><span style={{color:'var(--text-muted)',fontSize:12}}>or</span><div style={{flex:1,height:1,background:'var(--border)'}}/>
+          </div>
+          <div style={{marginBottom:14}}><label style={{fontSize:13,color:'var(--text-secondary)',display:'block',marginBottom:6}}>Email address</label><input type="email" placeholder="you@example.com" className="input-field"/></div>
+          <div style={{marginBottom:20}}><label style={{fontSize:13,color:'var(--text-secondary)',display:'block',marginBottom:6}}>Password</label><input type="password" placeholder="••••••••" className="input-field"/></div>
+          <button onClick={signInWithGoogle} className="btn-primary" style={{width:'100%',justifyContent:'center',padding:'13px 20px',fontSize:15}}>Sign In <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+          <p style={{textAlign:'center',marginTop:16,fontSize:13,color:'var(--text-muted)'}}>No account? <span onClick={signInWithGoogle} style={{color:'var(--accent)',cursor:'pointer'}}>Sign up free</span></p>
+        </div>
+        <p style={{textAlign:'center',marginTop:20,fontSize:12,color:'var(--text-muted)'}}>🔒 Trusted by 50,000+ job seekers · No spam · Cancel anytime</p>
+      </motion.div>
     </div>
   );
-}
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 18) return 'afternoon';
-  return 'evening';
 }
