@@ -1,170 +1,116 @@
 'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './AuthProvider';
-import {
-  SquaresFour,
-  Briefcase,
-  FileText,
-  ListChecks,
-  ChatCircleDots,
-  SignOut,
-  Sun,
-  Moon,
-  List,
-  X,
-  User,
-} from 'phosphor-react';
-import clsx from 'clsx';
 
 const navItems = [
-  { href: '/dashboard',     label: 'Dashboard',    icon: SquaresFour },
-  { href: '/jobs',          label: 'Find Jobs',     icon: Briefcase },
-  { href: '/resume',        label: 'Resume',        icon: FileText },
-  { href: '/applications',  label: 'Applications',  icon: ListChecks },
-  { href: '/assistant',     label: 'AI Assistant',  icon: ChatCircleDots },
+  { href: '/dashboard',    label: 'Home',         icon: '⊞', badge: 'Live' },
+  { href: '/jobs',         label: 'Job Feed',     icon: '💼', badge: '247' },
+  { href: '/applications', label: 'Applications', icon: '✓',  badge: '12'  },
+  { href: '/resume',       label: 'Resume Lab',   icon: '📄', badge: null  },
+  { href: '/assistant',    label: 'AI Assistant', icon: '🤖', badge: 'AI'  },
 ];
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [dark, setDark] = useState(true);
+  const [open, setOpen] = useState(false);
 
-  const toggleDark = () => {
-    document.documentElement.classList.toggle('dark');
-    setDark(d => !d);
-  };
-
-  const NavLink = ({ item }: { item: typeof navItems[0] }) => {
-    const active = pathname === item.href;
-    return (
-      <Link
-        href={item.href}
-        onClick={() => setMobileOpen(false)}
-        className={clsx(
-          'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-          active
-            ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-        )}
-      >
-        <item.icon size={18} weight={active ? 'fill' : 'regular'} />
-        {item.label}
-      </Link>
-    );
-  };
+  const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0,2);
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div style={{display:'flex',flexDirection:'column',height:'100%'}}>
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-zinc-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-400 rounded-lg flex items-center justify-center font-display font-bold text-white text-sm">
-            J
-          </div>
-          <span className="font-display text-lg font-bold text-white">
-            Job<span className="text-orange-400">.Bar</span>
-          </span>
+      <div style={{padding:'24px 20px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          
+          <span style={{fontFamily:'Space Grotesk,sans-serif',fontSize:20,fontWeight:700}}>job<span style={{color:'var(--accent)'}}>.bar</span></span>
         </div>
+        <button onClick={()=>setOpen(false)} style={{display:'block',background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',fontSize:18,lineHeight:1}}>✕</button>
       </div>
 
-      {/* Nav links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map(item => (
-          <NavLink key={item.href} item={item} />
-        ))}
+      {/* Nav */}
+      <nav style={{flex:1,padding:'12px 10px',overflowY:'auto'}}>
+        {navItems.map(item => {
+          const active = pathname === item.href;
+          return (
+            <Link key={item.href} href={item.href} onClick={()=>setOpen(false)}
+              style={{display:'flex',alignItems:'center',gap:12,padding:'11px 14px',borderRadius:10,marginBottom:2,textDecoration:'none',
+                color: active ? '#818cf8' : 'var(--text-secondary)',
+                background: active ? 'var(--accent-dim)' : 'transparent',
+                borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
+                transition:'all 0.2s',fontSize:14,fontWeight:active?600:400}}>
+              <span style={{fontSize:16}}>{item.icon}</span>
+              <span style={{flex:1}}>{item.label}</span>
+              {item.badge && (
+                <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20,
+                  background: item.badge==='Live'||item.badge==='AI' ? 'var(--accent-dim)' : 'rgba(255,255,255,0.08)',
+                  color: item.badge==='Live'||item.badge==='AI' ? '#818cf8' : 'var(--text-muted)'}}>
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Bottom section */}
-      <div className="px-3 py-4 border-t border-zinc-800 space-y-2">
-        {/* Theme toggle */}
-        <button
-          onClick={toggleDark}
-          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all"
-        >
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-          {dark ? 'Light Mode' : 'Dark Mode'}
-        </button>
-
-        {/* User info */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-800/50">
-          {user?.user_metadata?.avatar_url ? (
-            <img
-              src={user.user_metadata.avatar_url}
-              alt="avatar"
-              className="w-8 h-8 rounded-full"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <User size={16} className="text-orange-400" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-zinc-200 truncate">
-              {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-            </p>
-            <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
-          </div>
+      {/* Bottom */}
+      <div style={{padding:'12px 10px',borderTop:'1px solid var(--border)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 14px',marginBottom:6}}>
+          <div style={{width:8,height:8,borderRadius:'50%',background:'var(--success)',animation:'pulse 2s ease infinite'}}/>
+          <span style={{fontSize:12,color:'var(--text-muted)'}}>AI Engine Active</span>
         </div>
-
-        {/* Sign out */}
-        <button
-          onClick={signOut}
-          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-        >
-          <SignOut size={18} />
-          Sign Out
-        </button>
+        <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid var(--border)'}}>
+          <div style={{width:32,height:32,borderRadius:'50%',background:'var(--gradient)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'white',flexShrink:0}}>
+            {user?.user_metadata?.avatar_url
+              ? <img src={user.user_metadata.avatar_url} style={{width:32,height:32,borderRadius:'50%'}} alt="avatar"/>
+              : initials}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <p style={{fontSize:13,fontWeight:600,color:'var(--text-primary)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}</p>
+            <p style={{fontSize:11,color:'var(--success)',fontWeight:600}}>Free Forever</p>
+          </div>
+          <button onClick={signOut} title="Logout"
+            style={{background:'none',border:'none',color:'var(--text-muted)',cursor:'pointer',padding:4,borderRadius:6,display:'flex',alignItems:'center',transition:'color 0.2s'}}
+            onMouseEnter={e=>(e.currentTarget.style.color='var(--danger)')}
+            onMouseLeave={e=>(e.currentTarget.style.color='var(--text-muted)')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          </button>
+        </div>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 min-h-screen bg-zinc-950 border-r border-zinc-800 fixed left-0 top-0 z-30">
+      {/* Desktop sidebar */}
+      <aside style={{width:240,minHeight:'100vh',background:'rgba(10,10,15,0.95)',borderRight:'1px solid var(--border)',position:'fixed',left:0,top:0,zIndex:30,display:'none'}} className="md-sidebar">
+        <style>{`.md-sidebar{display:flex!important;flex-direction:column} @media(max-width:768px){.md-sidebar{display:none!important}}`}</style>
         <SidebarContent />
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-400 rounded-lg flex items-center justify-center font-display font-bold text-white text-xs">J</div>
-          <span className="font-display font-bold text-white">Job<span className="text-orange-400">.Bar</span></span>
+      <div style={{position:'fixed',top:0,left:0,right:0,zIndex:30,background:'rgba(10,10,15,0.95)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px'}} className="mobile-bar">
+        <style>{`@media(min-width:769px){.mobile-bar{display:none!important}}`}</style>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          
+          <span style={{fontFamily:'Space Grotesk,sans-serif',fontSize:18,fontWeight:700}}>job<span style={{color:'var(--accent)'}}>.bar</span></span>
         </div>
-        <button onClick={() => setMobileOpen(true)} className="p-2 text-zinc-400 hover:text-white">
-          <List size={22} />
-        </button>
+        <button onClick={()=>setOpen(true)} style={{background:'none',border:'none',color:'var(--text-primary)',cursor:'pointer',fontSize:20,lineHeight:1}}>☰</button>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile drawer */}
       <AnimatePresence>
-        {mobileOpen && (
+        {open && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 bg-black/60 z-40 md:hidden"
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 bottom-0 w-64 bg-zinc-950 border-r border-zinc-800 z-50 md:hidden"
-            >
-              <div className="absolute top-4 right-4">
-                <button onClick={() => setMobileOpen(false)} className="p-1 text-zinc-400 hover:text-white">
-                  <X size={20} />
-                </button>
-              </div>
-              <SidebarContent />
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setOpen(false)}
+              style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:40}}/>
+            <motion.aside initial={{x:'-100%'}} animate={{x:0}} exit={{x:'-100%'}} transition={{type:'spring',damping:25,stiffness:200}}
+              style={{position:'fixed',left:0,top:0,bottom:0,width:260,background:'rgba(10,10,15,0.98)',borderRight:'1px solid var(--border)',zIndex:50,display:'flex',flexDirection:'column'}}>
+              <SidebarContent/>
             </motion.aside>
           </>
         )}
