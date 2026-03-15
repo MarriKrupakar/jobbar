@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextType {
   session: Session | null;
@@ -22,53 +23,57 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      // Already logged in and on login page → go to dashboard
-      if (session?.user && window.location.pathname === '/') {
-        window.location.href = '/dashboard';
-      }
     });
 
-    // Listen for auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth]', event, session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        // Use hard redirect — guaranteed to work
-        window.location.href = '/dashboard';
-      }
-
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/';
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Separate effect for routing — only runs when user/loading changes
+  useEffect(() => {
+    if (loading) return; // Wait until we know auth state
+
+    const isAuthPage = pathname === '/' || pathname === '/login';
+    const isDashboardPage = pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/jobs') ||
+      pathname.startsWith('/resume') ||
+      pathname.startsWith('/applications') ||
+      pathname.startsWith('/assistant');
+
+    if (user && isAuthPage) {
+      // Logged in but on login page → go to dashboard
+      router.push('/dashboard');
+    } else if (!user && isDashboardPage) {
+      // Not logged in but on protected page → go to login
+      router.push('/');
+    }
+  }, [user, loading, pathname]);
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/';
+    router.push('/');
   };
 
   return (
