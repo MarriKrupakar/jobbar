@@ -1,5 +1,4 @@
 'use client';
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
@@ -14,18 +13,11 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  loading: true,
-  signInWithGoogle: async () => {},
-  signOut: async () => {},
+  session: null, user: null, loading: true,
+  signInWithGoogle: async () => {}, signOut: async () => {},
 });
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-const PUBLIC_ROUTES = ['/', '/login'];
+export function useAuth() { return useContext(AuthContext); }
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -40,51 +32,47 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      // If user is logged in and on homepage, redirect to dashboard
-      if (session?.user && pathname === '/') {
-        router.push('/dashboard');
+      // If already logged in and on root, redirect to dashboard
+      if (session?.user && (pathname === '/' || pathname === '/login')) {
+        router.replace('/dashboard');
       }
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    // Listen for ALL auth events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth]', event, session?.user?.email);
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
 
-        // Redirect to dashboard on sign in
-        if (event === 'SIGNED_IN' && session?.user) {
-          router.push('/dashboard');
-        }
-
-        // Redirect to home on sign out
-        if (event === 'SIGNED_OUT') {
-          router.push('/');
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          router.replace('/dashboard');
         }
       }
-    );
+      if (event === 'SIGNED_OUT') {
+        router.replace('/');
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signInWithGoogle = async () => {
-    const redirectTo = typeof window !== 'undefined'
-      ? `${window.location.origin}/dashboard`
-      : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`;
-
+    // Use Supabase URL as redirect — this is what Google needs to send back to
+    const siteUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo,
+        redirectTo: `${siteUrl}/dashboard`,
+        queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    router.replace('/');
   };
 
   return (
